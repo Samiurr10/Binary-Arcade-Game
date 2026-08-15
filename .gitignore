@@ -1,3 +1,9 @@
 build/
+firmware/build/
+firmware/sim-output.txt
 .DS_Store
 compile_commands.json
+*.map
+*.elf
+*.bin
+!firmware/README.md

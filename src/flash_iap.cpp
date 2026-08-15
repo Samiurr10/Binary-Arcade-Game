@@ -64,7 +64,14 @@ FlashIap::FlashIap(std::size_t page_count, std::size_t page_size)
       storage_(page_count * page_size, erased_value),
       wear_(page_count, 0) {
     if (page_count_ == 0 || page_size_ < record_size) {
+#ifdef BINARY_ARCADE_EMBEDDED
+        page_count_ = 4;
+        page_size_ = 256;
+        storage_.assign(page_count_ * page_size_, erased_value);
+        wear_.assign(page_count_, 0);
+#else
         throw std::invalid_argument("FlashIap requires non-empty pages with room for records");
+#endif
     }
 }
 

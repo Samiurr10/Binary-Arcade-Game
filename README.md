@@ -8,6 +8,10 @@ The code is host-runnable for testing, but the boundaries are shaped like
 firmware: game logic is isolated from bus drivers, FlashIAP persistence is
 append-only and CRC-checked, and mock transports make each subsystem testable.
 
+An **mbed-style STM32F401CC firmware** port lives in [`firmware/`](firmware/)
+and runs under the [Simantic](https://simantic.dev) CLI (Cortex-M4 — closest
+supported MCU to classic mbed Cortex-M3 boards).
+
 ## Features
 
 - 16x8 binary framebuffer with packed LED rows and ASCII preview rendering
@@ -21,6 +25,7 @@ append-only and CRC-checked, and mock transports make each subsystem testable.
   page erase rotation, and wear counters
 - Unit and integration tests for every major subsystem
 - CI workflow that builds, tests, and runs a benchmark smoke test
+- Mbed-style MCU firmware + Simantic simulation target (`firmware/`)
 
 ## Quick Start
 
@@ -37,6 +42,15 @@ Expected test output:
 All binary arcade tests passed
 ```
 
+### Firmware + Simantic
+
+```sh
+cd firmware
+make
+sim --mcu STM32F401CC --elf ./build/binary-arcade-firmware.elf --timeout 3 --ascii
+```
+
+See [firmware/README.md](firmware/README.md) for details.
 ## Architecture
 
 ```text
@@ -103,6 +117,7 @@ include/binary_arcade/  Public subsystem headers
 src/                    Firmware simulator implementation
 tests/                  Lightweight C++ test runner
 tools/                  Benchmark tool
+firmware/               Mbed-style STM32F401 port for Simantic
 docs/                   Architecture and performance notes
 .github/workflows/     CI build/test/benchmark workflow
 ```

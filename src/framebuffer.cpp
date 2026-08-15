@@ -10,7 +10,11 @@ void Framebuffer::clear() {
 
 void Framebuffer::set(std::size_t x, std::size_t y, bool on) {
     if (x >= width || y >= height) {
+#ifdef BINARY_ARCADE_EMBEDDED
+        return;
+#else
         throw std::out_of_range("framebuffer coordinate outside panel");
+#endif
     }
     const auto mask = static_cast<std::uint16_t>(1U << x);
     if (on) {
@@ -22,7 +26,11 @@ void Framebuffer::set(std::size_t x, std::size_t y, bool on) {
 
 bool Framebuffer::get(std::size_t x, std::size_t y) const {
     if (x >= width || y >= height) {
+#ifdef BINARY_ARCADE_EMBEDDED
+        return false;
+#else
         throw std::out_of_range("framebuffer coordinate outside panel");
+#endif
     }
     return (rows_[y] & static_cast<std::uint16_t>(1U << x)) != 0;
 }
@@ -37,6 +45,9 @@ std::array<std::uint8_t, Framebuffer::packed_size> Framebuffer::pack() const {
 }
 
 std::string Framebuffer::to_ascii() const {
+#ifdef BINARY_ARCADE_EMBEDDED
+    return {};
+#else
     std::string out;
     out.reserve((width + 1) * height);
     for (std::size_t y = 0; y < height; ++y) {
@@ -46,6 +57,7 @@ std::string Framebuffer::to_ascii() const {
         out.push_back('\n');
     }
     return out;
+#endif
 }
 
 Framebuffer game_over_frame() {
