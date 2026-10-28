@@ -59,7 +59,7 @@ All binary arcade tests passed
 ```sh
 cd firmware
 make
-sim --mcu STM32F401CC --elf ./build/binary-arcade-firmware.elf --timeout 3 --ascii
+sim STM32F401CC run --elf ./build/binary-arcade-firmware.elf --timeout 3 --ascii
 ```
 
 See [firmware/README.md](firmware/README.md) for details.

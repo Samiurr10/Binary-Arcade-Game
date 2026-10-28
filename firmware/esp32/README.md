@@ -162,28 +162,39 @@ It has more flash than the kit; our image/partition layout still uses 8 MB.
 This is not a claim of exact-board equivalence or validated simulation support.
 The hardware build and upload target remain the N8R8 kit.
 
-Build a complete ROM-boot image without touching a board:
+Build the application and an additional merged flash image without touching a board:
 
 ```sh
 pio run -d firmware/esp32 -e freenove_esp32s3 -t merged
-sim --mcu ESP32-S3-WROOM-1-N16R8 \
-    --flash firmware/esp32/.pio/build/freenove_esp32s3/firmware-merged.bin \
-    --timeout 5 --ascii --output build/esp32-sim-uart.txt
 ```
 
-This command uses the 0.5/0.6 CLI flag syntax; check `sim --help` if your release
-uses subcommands. The installed 0.5.20 CLI rejected this model before boot,
-reporting **sim >= 0.6.3 required**. Updating an isolated copy also failed at
-its release-manifest endpoint (HTTP 400), so no ESP32 runtime pass is claimed.
-Use a compatible release and verify its model status first. Even then, require
-`BINARY_ARCADE_READY` in the UART log; a process exiting without that marker is
-not proof the application booted. The model's Wi-Fi/ADC/PSRAM support must be
-checked separately before treating it as a substitute for hardware tests.
+For the current Simantic 0.8.6 CLI, use its ELF interface and require the boot marker:
+
+```sh
+sim ESP32-S3-WROOM-1-N16R8 run \
+    --elf firmware/esp32/.pio/build/freenove_esp32s3/firmware.elf \
+    --timeout 5 --ascii --expect BINARY_ARCADE_READY
+```
+
+**Validation result:** a local 0.8.6 smoke run of this ELF (two virtual seconds)
+returned no UART output and failed the expected `BINARY_ARCADE_READY` marker.
+The model is listed as `modeled`, but that alone does not establish compatibility
+with this Arduino image. No ESP32 boot/gameplay simulation pass is claimed.
+Resolving the missing marker requires inspection of the simulator's ELF/startup
+support and, after boot, its Wi-Fi/ADC/PSRAM paths. Physical board validation is
+still required. Local CLI updates do not update the hosted review container.
+
+Older CLI documentation describes `--mcu ... --flash firmware-merged.bin`.
+The installed 0.5.20 release rejected the selected model as requiring >=0.6.3;
+its updater failed with HTTP 400. The current official installer successfully
+installed 0.8.6, whose `run --help` exposes `--elf` and **no `--flash` flag**.
+Use the syntax supported by your installed release; do not pass a raw binary
+to `--elf`. The older ROM-boot command is not a tested 0.8.6 workaround.
 
 `firmware.bin` is the application only, loaded at 0x10000. `firmware-merged.bin`
 also includes the bootloader at 0x0, partition table at 0x8000 and boot_app0 at
-0xe000. For `--flash`, use the merged image, not the application alone. The
-merge target takes the same image paths and offsets as PlatformIO's uploader.
+0xe000. The merged image is available for tools that explicitly support raw
+flash boot. The merge target uses PlatformIO's uploader image paths and offsets.
 For physical uploads, prefer `pio run -t upload`; flashing a merged image also
 writes its padding across NVS, resetting saved state.
 

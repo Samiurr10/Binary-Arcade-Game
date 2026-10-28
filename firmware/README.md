@@ -29,10 +29,10 @@ Artifacts:
 ## Simulate with Simantic CLI
 
 ```sh
-sim --mcu STM32F401CC \
+sim STM32F401CC run \
   --elf ./build/binary-arcade-firmware.elf \
   --timeout 3 --ascii --only-messages \
-  --output ./sim-output.txt
+  --expect BINARY_ARCADE_DONE --output ./sim-output.txt
 ```
 
 Expected markers in UART output:
