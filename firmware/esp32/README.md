@@ -74,19 +74,29 @@ it in `src/main.cpp` before using in a public setting.
 
 ## Optional kit joystick
 
-No wiring is required for browser controls. To enable the kit joystick, append
-`-DARCADE_JOYSTICK=1` to the existing `build_flags` in `platformio.ini`, rebuild
-and upload. With power disconnected, wire:
+No wiring is required for browser controls. To enable the kit joystick, build
+and upload the named joystick environment:
+
+```sh
+pio run -d firmware/esp32 -e freenove_esp32s3_joystick -t upload --upload-port YOUR_PORT
+```
+
+With power disconnected, wire:
 
 | Joystick | ESP32-S3 |
 |---|---|
 | VCC | 3.3 V |
 | GND | GND |
-| VRx | GPIO 14 |
-| VRy | GPIO 13 |
+| VRx | GPIO 1 (ADC1) |
+| VRy | GPIO 2 (ADC1) |
 | SW | GPIO 12 |
 
-These match Freenove's chapter 14 pins. Use **3.3 V**, not 5 V, for the joystick
+**Rewire VRx/VRy if you followed the earlier GPIO14/13 instructions.**
+Unlike Freenove's standalone chapter 14 example, this game runs Wi-Fi throughout.
+GPIO14/13 use ADC2, whose reads can fail while Wi-Fi is active; GPIO1/2 use
+ADC1 and avoid that contention. SW remains GPIO12 (digital input). See
+[Espressif's ADC limitations](https://docs.espressif.com/projects/esp-idf/en/v4.4.7/esp32s3/api-reference/peripherals/adc.html#adc-limitations).
+Use **3.3 V**, not 5 V, for the joystick
 supply. Its switch uses the internal pull-up. Center dead zone is 12%; movement
 assumes an ADC center near 2048. If a particular joystick drifts or is reversed,
 adjust the axis function/sign in `src/main.cpp`. Press the stick to start, hold
@@ -130,3 +140,56 @@ Alternatively set `CHROME_PATH` to a locally installed Chrome executable.
 The test uses a mocked WebSocket transport, exercises launch, movement/fire,
 pause, state overlays and disconnect, and saves desktop/mobile screenshots
 under `build/`. It does not stand in for on-device network tests.
+
+## Simantic review and simulation
+
+There are two independent projects: `firmware/simantic.json` describes the
+STM32 simulator demo; `firmware/esp32/simantic.json` describes this ESP32 target.
+The STM32 demo passing does **not** validate the ESP32 Wi-Fi/ADC/NVS paths.
+
+The first PR review's ESP32 blocker was the review container: it did not have
+PlatformIO, the Arduino framework or the Xtensa toolchain. The ESP32 manifest
+specifies the custom build command, but does not install missing software into
+Simantic's hosted image. That image must provide PlatformIO 6.1.18 and allow
+installation of the pinned packages in `platformio.ini` (or pre-cache them).
+The reviewer supports custom commands, even though `platformio` is not one of
+its `build.system` enum values. Do not label an Arduino project `esp-idf` merely
+to get past detection: it is not an ESP-IDF CMake project.
+
+The manifest uses **ESP32-S3-WROOM-1-N16R8 as a simulation surrogate**, because
+`sim models` listed that 8 MB OPI-PSRAM variant but not the physical N8R8 kit.
+It has more flash than the kit; our image/partition layout still uses 8 MB.
+This is not a claim of exact-board equivalence or validated simulation support.
+The hardware build and upload target remain the N8R8 kit.
+
+Build a complete ROM-boot image without touching a board:
+
+```sh
+pio run -d firmware/esp32 -e freenove_esp32s3 -t merged
+sim --mcu ESP32-S3-WROOM-1-N16R8 \
+    --flash firmware/esp32/.pio/build/freenove_esp32s3/firmware-merged.bin \
+    --timeout 5 --ascii --output build/esp32-sim-uart.txt
+```
+
+This command uses the 0.5/0.6 CLI flag syntax; check `sim --help` if your release
+uses subcommands. The installed 0.5.20 CLI rejected this model before boot,
+reporting **sim >= 0.6.3 required**. Updating an isolated copy also failed at
+its release-manifest endpoint (HTTP 400), so no ESP32 runtime pass is claimed.
+Use a compatible release and verify its model status first. Even then, require
+`BINARY_ARCADE_READY` in the UART log; a process exiting without that marker is
+not proof the application booted. The model's Wi-Fi/ADC/PSRAM support must be
+checked separately before treating it as a substitute for hardware tests.
+
+`firmware.bin` is the application only, loaded at 0x10000. `firmware-merged.bin`
+also includes the bootloader at 0x0, partition table at 0x8000 and boot_app0 at
+0xe000. For `--flash`, use the merged image, not the application alone. The
+merge target takes the same image paths and offsets as PlatformIO's uploader.
+For physical uploads, prefer `pio run -t upload`; flashing a merged image also
+writes its padding across NVS, resetting saved state.
+
+GitHub CI now builds both browser-only and joystick environments and publishes
+ELF, application and merged images as downloadable artifacts. These artifacts
+let a simulator operator run the exact commit without rebuilding it. They do
+not automatically make Simantic's hosted reviewer consume GitHub artifacts.
+See [Simantic project configuration](https://simantic.com/docs/simantic-json)
+and [ROM-boot image usage](https://simantic.com/docs/guide).

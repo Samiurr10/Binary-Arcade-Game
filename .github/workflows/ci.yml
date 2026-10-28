@@ -17,6 +17,9 @@ jobs:
         run: make benchmark
 
   esp32-firmware:
+    strategy:
+      matrix:
+        environment: [freenove_esp32s3, freenove_esp32s3_joystick]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,4 +28,12 @@ jobs:
           python-version: '3.11'
       - run: pip install platformio==6.1.18
       - run: python firmware/esp32/tools/embed_web.py --check
-      - run: pio run -d firmware/esp32
+      - run: pio run -d firmware/esp32 -e ${{ matrix.environment }} -t merged
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.environment }}
+          path: |
+            firmware/esp32/.pio/build/${{ matrix.environment }}/firmware.elf
+            firmware/esp32/.pio/build/${{ matrix.environment }}/firmware.bin
+            firmware/esp32/.pio/build/${{ matrix.environment }}/firmware-merged.bin
+          if-no-files-found: error

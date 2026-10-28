@@ -19,6 +19,9 @@ TickResult ArcadeSystem::tick(Input input) {
     (void)display_ok;
     telemetry_.emit_score(result.score, result.state == GameState::game_over);
 
+    // Persist every completed game so games_played survives restart. This is
+    // one appended record, not one erase: FlashIap erases only when slots fill.
+    // A real-flash port must budget erase endurance / use wear-levelled storage.
     if (previous_state == GameState::running && result.state == GameState::game_over) {
         ++games_played_;
         ++sequence_;

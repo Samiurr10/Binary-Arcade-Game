@@ -10,8 +10,11 @@
 #ifndef ARCADE_JOYSTICK
 #define ARCADE_JOYSTICK 0
 #endif
-// Freenove FNK0082 chapter 14: joystick VRx=14, VRy=13, SW=12.
-constexpr int joyX=14, joyY=13, joySwitch=12;
+// Use ADC1 for axes: Freenove's standalone lesson uses ADC2 GPIO14/13,
+// but those can return failed reads while this firmware's Wi-Fi AP is active.
+constexpr int joyX=1, joyY=2, joySwitch=12;
+static_assert(joyX >= 1 && joyX <= 10 && joyY >= 1 && joyY <= 10,
+              "Wi-Fi joystick axes must use ESP32-S3 ADC1 GPIOs");
 WebServer http(80);
 WebSocketsServer sockets(81);
 Preferences prefs;

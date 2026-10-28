@@ -44,3 +44,8 @@ Expected markers in UART output:
 - `BINARY_ARCADE_I2C_OK`
 - `BINARY_ARCADE_FLASH_OK`
 - `BINARY_ARCADE_DONE score=… state=game_over`
+
+`simantic.json` pins this project's MCU to STM32F401CC, its ELF path and expected
+UART markers. It belongs in this directory (not the repository root), since the
+root Makefile builds a host executable. The ESP32 project has a separate
+manifest and build prerequisites; see `esp32/README.md`.
