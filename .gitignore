@@ -7,3 +7,7 @@ compile_commands.json
 *.elf
 *.bin
 !firmware/README.md
+
+.pio/
+__pycache__/
+node_modules/

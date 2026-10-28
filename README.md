@@ -1,5 +1,17 @@
 # Binary Arcade Game
 
+## ESP32-S3 color upgrade: Orbital
+
+The [Freenove FNK0082 firmware](firmware/esp32/README.md) runs an expanded space
+shooter on the ESP32-S3 and serves its graphical browser display over local
+Wi-Fi. Includes shaded asteroids, ship thrust, particles, shields, combos,
+progressive difficulty, keyboard/touch controls and optional kit joystick input.
+The kit does not include a color TFT; your phone or laptop is the display.
+
+Build with `pio run -d firmware/esp32`. Run all host regressions with `make test`.
+
+## Original simulator
+
 Retro embedded arcade firmware simulator in C++20. The project models a small
 binary LED-matrix game with explicit I2C display frames, UART telemetry, SPI
 sprite reads, and a custom FlashIAP-style high-score log.
@@ -78,7 +90,7 @@ More detail is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Performance
 
-Measured on Apple M4 / Darwin arm64 with Apple clang 21:
+Historical baseline before the game-count and lane-randomness fixes (Apple M4 / Darwin arm64 with Apple clang 21). See the updated notes in `docs/PERFORMANCE.md`; these numbers do not describe the ESP32 port:
 
 | Metric | Value |
 |--------|-------|

@@ -20,6 +20,7 @@ class ArcadeSystem {
     UartTelemetry& telemetry_;
     FlashIap& flash_;
     std::uint32_t games_played_{0};
+    std::uint32_t sequence_{0};
 };
 
 }  // namespace binary_arcade

@@ -14,10 +14,12 @@ TickResult GameEngine::tick(Input input) {
         return {state_, score_, false};
     }
 
-    if (has_input(input, Input::left) && player_x_ > 0) {
+    const bool left = has_input(input, Input::left);
+    const bool right = has_input(input, Input::right);
+    if (left && !right && player_x_ > 0) {
         --player_x_;
     }
-    if (has_input(input, Input::right) && player_x_ + 1 < Framebuffer::width) {
+    if (right && !left && player_x_ + 1 < Framebuffer::width) {
         ++player_x_;
     }
     if (has_input(input, Input::fire)) {
@@ -88,8 +90,8 @@ std::uint32_t GameEngine::next_random() {
 }
 
 void GameEngine::spawn_row() {
-    const auto column = next_random() % Framebuffer::width;
-    const auto second = (column + 5 + (next_random() % 7)) % Framebuffer::width;
+    const auto column = (next_random() >> 16U) % Framebuffer::width;
+    const auto second = (column + 5 + ((next_random() >> 16U) % 7)) % Framebuffer::width;
     obstacles_[0] = static_cast<std::uint16_t>((1U << column) | (1U << second));
 }
 
