@@ -3,11 +3,13 @@
   "name": "orbital-esp32s3",
   "mcu": "ESP32-S3-WROOM-1-N16R8",
   "build": {
-    "command": "pio run -e freenove_esp32s3 -t merged",
-    "elf": ".pio/build/freenove_esp32s3/firmware.elf"
+    "command": "pio run -e freenove_esp32s3 -t simantic",
+    "elf": ".pio/build/freenove_esp32s3/firmware-simantic.elf"
   },
   "simulate": {
     "seconds": 5,
-    "expect": ["BINARY_ARCADE_READY"]
+    "expect": [
+      "BINARY_ARCADE_READY"
+    ]
   }
 }

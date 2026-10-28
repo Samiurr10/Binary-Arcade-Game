@@ -28,3 +28,24 @@ env.AddCustomTarget(
     "merged", "$BUILD_DIR/${PROGNAME}.bin", merge_flash,
     title="Merge flash image", description="Build a ROM-boot image for simulation",
 )
+
+
+def simantic_image(source, target, env):
+    import os
+    rom = os.environ.get("SIMANTIC_ESP32S3_ROM")
+    if not rom or not Path(rom).is_file():
+        raise RuntimeError("Set SIMANTIC_ESP32S3_ROM to your 384 KB ESP32-S3 mask-ROM dump; see README")
+    merge_flash(source, target, env)
+    build = Path(env.subst("$BUILD_DIR"))
+    subprocess.run([
+        env.subst("$PYTHONEXE"),
+        str(Path(env.subst("$PROJECT_DIR")) / "tools" / "make_simantic_image.py"),
+        "--rom", rom, "--flash", str(build / "firmware-merged.bin"),
+        "--output", str(build / "firmware-simantic.elf"),
+    ], check=True)
+
+
+env.AddCustomTarget(
+    "simantic", "$BUILD_DIR/${PROGNAME}.bin", simantic_image,
+    title="Package Simantic boot ELF", description="Requires SIMANTIC_ESP32S3_ROM; simulation only",
+)

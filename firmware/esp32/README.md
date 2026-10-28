@@ -117,7 +117,8 @@ camera is not initialized, so its overlapping GPIOs are not driven by firmware.
 - 60 Hz simulation and 25 Hz snapshots are targets, **not measured board results**.
 - Validated: ESP32-S3 cross-compilation; host gameplay/protocol regression tests;
   address/undefined-behavior sanitizers; browser UI tests with mocked transport
-  and snapshots recorded from the real C++ engine.
+  and snapshots recorded from the real C++ engine; Simantic 0.8.6 ROM boot to
+  `BINARY_ARCADE_READY` at 0.327 simulated seconds.
 - Not validated: physical board boot, RF latency, joystick ADC calibration,
   hardware NVS power-cycle persistence, sustained Wi-Fi throughput.
 
@@ -159,37 +160,51 @@ to get past detection: it is not an ESP-IDF CMake project.
 The manifest uses **ESP32-S3-WROOM-1-N16R8 as a simulation surrogate**, because
 `sim models` listed that 8 MB OPI-PSRAM variant but not the physical N8R8 kit.
 It has more flash than the kit; our image/partition layout still uses 8 MB.
-This is not a claim of exact-board equivalence or validated simulation support.
-The hardware build and upload target remain the N8R8 kit.
+This is not a claim of exact-board equivalence. The hardware build and upload
+target remain the N8R8 kit.
 
-Build the application and an additional merged flash image without touching a board:
+### Root cause of the application-only ELF failure
+
+Simantic 0.8.6 starts an application-only ELF directly at its entry point with
+reset CPU state and no populated boot ROM. This application's entry is
+`call_start_cpu0` at `0x40376a44`; its first instruction is `entry a1,48`.
+Reset PS is `0x1f` (EXCM set, windowed registers disabled), so that instruction
+immediately raises IllegalInstruction. The exception vector points into the
+empty ROM. The trace showed zero retired instructions and repeated exceptions,
+before Arduino `setup()` or any game code could execute. A minimal instruction
+probe confirmed that ENTRY works when the required CPU state is initialized.
+
+The fix is to run the real boot sequence, using the **same compiled firmware**:
+package a supplied ESP32-S3 mask ROM, its DROM data view, and the complete merged
+flash image into a simulator ELF. This lets ROM and the second-stage bootloader
+prepare CPU state and application mappings before entering ESP-IDF.
+
+Supply a 384 KB ESP32-S3 mask-ROM dump (tested with ROM version 20210327):
 
 ```sh
-pio run -d firmware/esp32 -e freenove_esp32s3 -t merged
-```
-
-For the current Simantic 0.8.6 CLI, use its ELF interface and require the boot marker:
-
-```sh
+SIMANTIC_ESP32S3_ROM=/absolute/path/esp32s3-rom.bin \
+    pio run -d firmware/esp32 -e freenove_esp32s3 -t simantic
 sim ESP32-S3-WROOM-1-N16R8 run \
-    --elf firmware/esp32/.pio/build/freenove_esp32s3/firmware.elf \
-    --timeout 5 --ascii --expect BINARY_ARCADE_READY
+    --elf firmware/esp32/.pio/build/freenove_esp32s3/firmware-simantic.elf \
+    --timeout 2 --ascii --expect BINARY_ARCADE_READY
 ```
 
-**Validation result:** a local 0.8.6 smoke run of this ELF (two virtual seconds)
-returned no UART output and failed the expected `BINARY_ARCADE_READY` marker.
-The model is listed as `modeled`, but that alone does not establish compatibility
-with this Arduino image. No ESP32 boot/gameplay simulation pass is claimed.
-Resolving the missing marker requires inspection of the simulator's ELF/startup
-support and, after boot, its Wi-Fi/ADC/PSRAM paths. Physical board validation is
-still required. Local CLI updates do not update the hosted review container.
+The ROM must be provided by the operator; it is not downloaded or distributed
+by this repository. The hosted reviewer also needs `SIMANTIC_ESP32S3_ROM` set to
+that file, in addition to PlatformIO and its packages. Updating the local CLI
+does not provision the hosted review container.
 
-Older CLI documentation describes `--mcu ... --flash firmware-merged.bin`.
-The installed 0.5.20 release rejected the selected model as requiring >=0.6.3;
-its updater failed with HTTP 400. The current official installer successfully
-installed 0.8.6, whose `run --help` exposes `--elf` and **no `--flash` flag**.
-Use the syntax supported by your installed release; do not pass a raw binary
-to `--elf`. The older ROM-boot command is not a tested 0.8.6 workaround.
+**Validation result:** this target passed the boot-marker assertion on Simantic
+0.8.6, with `BINARY_ARCADE_READY` at 0.327 simulated seconds. This establishes
+startup through the application's readiness marker, not end-to-end Wi-Fi,
+ADC calibration, persistence or gameplay validation. The simulator still emits
+SPI opcode and ADC pacing warnings; physical board testing remains required.
+
+`firmware-simantic.elf` contains ROM plus flash at simulator-specific addresses.
+It is simulation-only: do not flash it to a board or distribute it as a game
+firmware release. The ordinary `firmware.elf` remains the application symbol
+image. The current CLI accepts `--elf`, not `--flash`; do not pass a raw binary
+to `--elf`.
 
 `firmware.bin` is the application only, loaded at 0x10000. `firmware-merged.bin`
 also includes the bootloader at 0x0, partition table at 0x8000 and boot_app0 at
@@ -200,7 +215,7 @@ writes its padding across NVS, resetting saved state.
 
 GitHub CI now builds both browser-only and joystick environments and publishes
 ELF, application and merged images as downloadable artifacts. These artifacts
-let a simulator operator run the exact commit without rebuilding it. They do
+let a simulator operator package the exact commit with a supplied ROM. They do
 not automatically make Simantic's hosted reviewer consume GitHub artifacts.
 See [Simantic project configuration](https://simantic.com/docs/simantic-json)
 and [ROM-boot image usage](https://simantic.com/docs/guide).

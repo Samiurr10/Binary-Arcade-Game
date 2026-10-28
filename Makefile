@@ -31,6 +31,7 @@ test: $(BUILD_DIR)/test-runner $(BUILD_DIR)/esp32-tests
 	./$(BUILD_DIR)/test-runner
 	./$(BUILD_DIR)/esp32-tests
 	python3 firmware/esp32/tools/embed_web.py --check
+	python3 tests/test_simantic_image.py
 
 benchmark: $(BUILD_DIR)/benchmark
 	./$(BUILD_DIR)/benchmark
