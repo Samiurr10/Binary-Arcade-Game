@@ -102,7 +102,8 @@ std::optional<SaveRecord> FlashIap::load_latest() const {
             const auto decoded = decode(std::span<const std::uint8_t>(storage_).subspan(
                 offset, record_size));
             if (decoded.has_value() &&
-                (!latest.has_value() || decoded->sequence > latest->sequence)) {
+                (!latest.has_value() || (decoded->sequence != latest->sequence &&
+                 static_cast<std::uint32_t>(decoded->sequence - latest->sequence) < 0x80000000U))) {
                 latest = decoded;
             }
         }

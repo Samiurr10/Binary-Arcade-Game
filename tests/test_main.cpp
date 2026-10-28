@@ -123,9 +123,45 @@ void test_system_integrates_drivers_and_flash() {
     require(flash.load_latest().has_value(), "system persists high score on game over");
 }
 
+
+void test_regressions() {
+    using namespace binary_arcade;
+    GameEngine edge(7);
+    for(int i=0;i<8;++i) (void)edge.tick(Input::left|Input::fire);
+    const auto before=edge.player_x();
+    (void)edge.tick(Input::left|Input::right|Input::fire);
+    require(edge.player_x()==before, "opposite buttons cancel at the left boundary");
+    GameEngine lanes(1);
+    unsigned seen=0;
+    for(int i=0;i<200;++i) {
+        (void)lanes.tick(Input::fire);
+        auto packed=lanes.framebuffer().pack();
+        seen |= packed[0] | (static_cast<unsigned>(packed[1])<<8U);
+    }
+    require(seen==0xffffU,"random obstacles reach every lane instead of repeating low LCG bits");
+    FlashIap flash;
+    require(flash.save({0xfffffffeU,100000,10}), "seed persisted stats");
+    GameEngine game(1);
+    RecordingI2cBus bus; RecordingUartSink sink;
+    I2cDisplay display(bus); UartTelemetry telemetry(sink);
+    ArcadeSystem system(game,display,telemetry,flash);
+    for(int round=0;round<3;++round) {
+        game.reset(1);
+        for(int i=0;i<100 && game.state()==GameState::running;++i)
+            (void)system.tick(i%3==0?Input::left:Input::right);
+        require(game.state()==GameState::game_over,"regression round terminates");
+        (void)system.tick(Input::none);
+        require(system.current_save().games_played==static_cast<unsigned>(11+round),
+                "count each completed game once even without a new high score");
+    }
+    require(flash.load_latest()->sequence==1,"load newest sequence across uint32 rollover");
+    require(flash.load_latest()->games_played==13,"restore all completed rounds");
+}
+
 }  // namespace
 
 int main() {
+    test_regressions();
     test_crc_known_vector();
     test_framebuffer_pack_and_ascii();
     test_game_movement_fire_and_game_over();

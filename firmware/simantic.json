@@ -1,0 +1,13 @@
+{
+  "$schema": "https://simantic.com/schema/simantic.json",
+  "name": "binary-arcade-stm32",
+  "mcu": "STM32F401CC",
+  "build": {
+    "system": "make",
+    "elf": "build/binary-arcade-firmware.elf"
+  },
+  "simulate": {
+    "seconds": 2,
+    "expect": ["BINARY_ARCADE_BOOT", "BINARY_ARCADE_FLASH_OK", "BINARY_ARCADE_DONE"]
+  }
+}

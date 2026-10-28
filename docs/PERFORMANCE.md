@@ -1,3 +1,16 @@
+# Current validation note
+
+The original measurements below predate the completed-game counter fix and
+improved lane randomness. They are retained as historical baseline data.
+After the fix, a local 250,000-tick run took 184,896 us (0.740 us/tick,
+1.35M ticks/sec) and wrote 10,754 save records. Every completed game now updates
+the simulated log, including games that do not beat the high score.
+These are **host simulator** measurements, not ESP32 performance results.
+The new ESP32 port saves to NVS once on game over and targets 60 simulation
+steps/second with 25 network snapshots/second; hardware timing is unmeasured.
+
+## Historical baseline
+
 # Performance
 
 Benchmark command:
